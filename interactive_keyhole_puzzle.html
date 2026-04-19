@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>When the Storm Has Passed</title>
+  <style>
+    :root {
+      --bg: #f4eee3;
+      --panel: #fffaf2;
+      --ink: #2d241c;
+      --muted: #6b5a4b;
+      --accent: #3f6e8c;
+      --success: #2f7d4d;
+      --error: #a33a3a;
+      --shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      background: linear-gradient(180deg, #f7f1e6 0%, #efe4d2 100%);
+      color: var(--ink);
+    }
+
+    .page {
+      max-width: 1800px;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.3rem);
+      letter-spacing: 0.03em;
+    }
+
+    .header p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 22px;
+      align-items: start;
+    }
+
+    .board, .sidebar {
+      background: rgba(255,255,255,0.45);
+      backdrop-filter: blur(3px);
+      border: 1px solid rgba(79, 53, 30, 0.12);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .answer-panel {
+      background: rgba(255,255,255,0.45);
+      backdrop-filter: blur(3px);
+      border: 1px solid rgba(79, 53, 30, 0.12);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 22px;
+    }
+
+    .doors-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 28px;
+      justify-items: center;
+    }
+
+    .door {
+      min-height: 360px;
+      width: 100%;
+      max-width: 160px;
+      border: 6px solid rgba(61, 38, 20, 0.28);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.18), 0 10px 18px rgba(0,0,0,0.12);
+      padding: 14px 12px 16px;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      user-select: none;
+      gap: 8px;
+    }
+
+    .door:hover {
+      transform: translateY(-4px);
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2), 0 16px 26px rgba(0,0,0,0.16);
+    }
+
+    .door.active {
+      outline: 4px solid rgba(49, 89, 116, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .door.solved {
+      filter: saturate(0.88) brightness(1.03);
+    }
+
+    .door.solved::after {
+      content: "Solved";
+      position: absolute;
+      bottom: 10px;
+      right: 12px;
+      background: rgba(255,255,255,0.88);
+      color: var(--success);
+      font-size: 0.88rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+
+    .door-top {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .plate {
+      background: rgba(45, 28, 12, 0.6);
+      color: #d4af96;
+      border: 1px solid rgba(232, 197, 120, 0.35);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .code {
+      font-size: 0.8rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      color: rgba(255,255,255,0.8);
+    }
+
+    .door-clue-preview {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      text-align: center;
+      background: transparent;
+      padding: 12px 10px;
+      border-radius: 8px;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .door-window {
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(0, 0, 0, 0.25);
+      border-radius: 6px;
+      background: linear-gradient(135deg, rgba(200, 220, 240, 0.4), rgba(150, 180, 210, 0.3));
+      margin: 0 auto 8px;
+      box-shadow: 
+        inset 0 1px 3px rgba(255, 255, 255, 0.4),
+        inset 0 -1px 3px rgba(0, 0, 0, 0.2),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+
+    .door-window::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        linear-gradient(90deg, transparent 48%, rgba(0,0,0,0.1) 49%, rgba(0,0,0,0.1) 51%, transparent 52%),
+        linear-gradient(180deg, transparent 48%, rgba(0,0,0,0.1) 49%, rgba(0,0,0,0.1) 51%, transparent 52%);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    .door-handle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      background: rgba(184, 134, 11, 0.7);
+      border-radius: 50%;
+      box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(255, 255, 255, 0.3);
+    }
+
+    .sidebar {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 18px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid rgba(87, 62, 35, 0.12);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+    }
+
+    .selected-door-name {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .selected-clue {
+      font-size: 1.12rem;
+      line-height: 1.45;
+      margin-bottom: 14px;
+      min-height: 68px;
+    }
+
+    .meta-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .meta-pill {
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #fff;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .answer-box {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      border: 1px solid rgba(70, 53, 36, 0.18);
+      border-radius: 12px;
+      padding: 12px 13px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      background: var(--accent);
+      color: white;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button.secondary { background: #6f655d; }
+    button.ghost { background: #efe7db; color: var(--ink); }
+
+    .status {
+      min-height: 24px;
+      font-size: 0.95rem;
+      font-weight: bold;
+    }
+
+    .status.success { color: var(--success); }
+    .status.error { color: var(--error); }
+
+    .progress-line {
+      color: var(--muted);
+      font-size: 0.96rem;
+      margin-top: 8px;
+    }
+
+    .storm-text {
+      text-align: center;
+      font-size: clamp(1.4rem, 2.2vw, 2rem);
+      margin-top: 24px;
+      color: #4d4034;
+      font-style: italic;
+    }
+
+    .hint-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .hint {
+      background: white;
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--muted);
+    }
+
+    .small {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .doors-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .answer-box {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <h1>When the Storm Has Passed</h1>
+      <p>Solve the clues. The rest is still yours to discover.</p>
+    </div>
+
+    <section class="panel answer-panel">
+      <h2>Final Answer</h2>
+      <div class="answer-box">
+        <input id="finalInput" type="text" placeholder="Enter final answer" />
+        <button id="checkFinalBtn">Submit</button>
+      </div>
+      <div id="finalStatus" class="status"></div>
+    </section>
+
+    <div class="layout">
+      <section class="board">
+        <div id="doorsGrid" class="doors-grid"></div>
+        <div class="storm-text"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const doors = [
+      {
+        id: 1,
+        displayName: 'Pink Door',
+        color: '#d87b8d',
+        clue: 'A face designed to conceal another',
+        answer: 'MASK',
+        plate: 'III',
+        code: '9(4)2'
+      },
+      {
+        id: 2,
+        displayName: 'Blue Door',
+        color: '#3167b7',
+        clue: 'An opening that allows sight but not passage',
+        answer: 'WINDOW',
+        plate: 'V',
+        code: '4(6)8'
+      },
+      {
+        id: 3,
+        displayName: 'Yellow-Green Door',
+        color: '#80b93c',
+        clue: 'No longer whole but not yet gone',
+        answer: 'BROKEN',
+        plate: 'IV',
+        code: '7(6)1'
+      },
+      {
+        id: 4,
+        displayName: 'Purple Door',
+        color: '#6f4daa',
+        clue: 'Many voices pretending to be one',
+        answer: 'CHORUS',
+        plate: 'IV',
+        code: '3(6)7'
+      },
+      {
+        id: 5,
+        displayName: 'Red Door',
+        color: '#b54432',
+        clue: 'The path traced by a door in use',
+        answer: 'SWING',
+        plate: 'II',
+        code: '8(5)4'
+      },
+      {
+        id: 6,
+        displayName: 'Green Door',
+        color: '#47a86a',
+        clue: 'What distance becomes when measured upward',
+        answer: 'HEIGHT',
+        plate: 'II',
+        code: '2(6)9'
+      },
+      {
+        id: 7,
+        displayName: 'Red-Orange Door',
+        color: '#cf6b2a',
+        clue: 'It swings but never dances',
+        answer: 'HINGE',
+        plate: 'I',
+        code: '5(5)6'
+      },
+      {
+        id: 8,
+        displayName: 'Yellow Door',
+        color: '#d8bf3f',
+        clue: 'A place where thought is gathered and stored',
+        answer: 'MEMORY',
+        plate: 'II',
+        code: '1(6)4'
+      },
+      {
+        id: 9,
+        displayName: 'Blue-Green Door',
+        color: '#3faeb0',
+        clue: 'A return disguised as progress',
+        answer: 'CYCLE',
+        plate: 'II',
+        code: '6(5)1'
+      },
+      {
+        id: 10,
+        displayName: 'Yellow-Orange Door',
+        color: '#cf9630',
+        clue: 'A seat defined more by power than comfort',
+        answer: 'THRONE',
+        plate: 'III',
+        code: '4(6)5'
+      },
+      {
+        id: 11,
+        displayName: 'Orange Door',
+        color: '#db8432',
+        clue: 'To move from outside to within',
+        answer: 'ENTER',
+        plate: 'I',
+        code: '9(5)3'
+      },
+      {
+        id: 12,
+        displayName: 'Blue-Purple Door',
+        color: '#5f61c7',
+        clue: 'Support disguised as decoration',
+        answer: 'COLUMN',
+        plate: 'IV',
+        code: '8(6)2'
+      },
+      {
+        id: 13,
+        displayName: 'Purple-Pink Door',
+        color: '#b269c4',
+        clue: 'Presence made from absence of light',
+        answer: 'SHADOW',
+        plate: 'VI',
+        code: '7(6)0'
+      }
+    ];
+
+    const finalPhrase = 'WHERE KEY TURNS';
+    const finalAnswer = 'KEYHOLE';
+
+    let selectedDoorId = null;
+    // Clear old solved doors data
+    localStorage.removeItem('stormPuzzleSolvedDoors');
+    const solvedDoors = new Set(JSON.parse(localStorage.getItem('stormPuzzleSolvedDoors') || '[]'));
+
+    const doorsGrid = document.getElementById('doorsGrid');
+    const selectedClue = document.getElementById('selectedClue');
+    const selectedPlate = document.getElementById('selectedPlate');
+    const selectedCode = document.getElementById('selectedCode');
+    const progress = document.getElementById('progress');
+    const finalInput = document.getElementById('finalInput');
+    const finalStatus = document.getElementById('finalStatus');
+    const checkFinalBtn = document.getElementById('checkFinalBtn');
+
+    function renderDoors() {
+      doorsGrid.innerHTML = '';
+      doors.forEach(door => {
+        const el = document.createElement('button');
+        el.className = 'door';
+        if (door.id === selectedDoorId) el.classList.add('active');
+        if (solvedDoors.has(door.id)) el.classList.add('solved');
+        el.style.background = door.color;
+        el.setAttribute('aria-label', `${door.displayName}: ${door.clue}`);
+        el.innerHTML = `
+          <div class="plate">${door.plate}</div>
+          <div class="door-handle"></div>
+          <div class="door-top">
+            <div style="margin-top: 20px;"></div>
+            <div class="door-window"></div>
+            <div class="code">${door.code}</div>
+          </div>
+          <div class="door-clue-preview">${door.clue}</div>
+        `;
+        el.addEventListener('click', () => selectDoor(door.id));
+        doorsGrid.appendChild(el);
+      });
+      progress.textContent = ``;
+      localStorage.setItem('stormPuzzleSolvedDoors', JSON.stringify([...solvedDoors]));
+    }
+
+    function selectDoor(id) {
+      selectedDoorId = id;
+      const door = doors.find(d => d.id === id);
+      selectedClue.textContent = door.clue;
+      selectedPlate.textContent = `Roman numeral: ${door.plate}`;
+      selectedCode.textContent = `Code: ${door.code}`;
+      renderDoors();
+    }
+
+    function normalize(text) {
+      return text.trim().toUpperCase().replace(/[^A-Z]/g, '');
+    }
+
+    function checkPhrase() {
+      const guess = normalize(finalInput.value);
+      const phrase = normalize(finalPhrase);
+      const answer = normalize(finalAnswer);
+      
+      if (guess === answer) {
+        finalStatus.textContent = 'Correct: KEYHOLE';
+        finalStatus.className = 'status success';
+      } else if (guess === phrase) {
+        finalStatus.textContent = 'Keep going.';
+        finalStatus.className = 'status success';
+      } else {
+        finalStatus.textContent = 'That is not right.';
+        finalStatus.className = 'status error';
+      }
+    }
+
+    function checkFinal() {
+      const guess = normalize(finalInput.value);
+      const phrase = normalize(finalPhrase);
+      const answer = normalize(finalAnswer);
+      
+      if (guess === answer) {
+        finalStatus.textContent = 'Correct: KEYHOLE';
+        finalStatus.className = 'status success';
+      } else if (guess === phrase) {
+        finalStatus.textContent = 'Keep going.';
+        finalStatus.className = 'status success';
+      } else {
+        finalStatus.textContent = 'That is not right.';
+        finalStatus.className = 'status error';
+      }
+    }
+
+    function shadeColor(hex, percent) {
+      const num = parseInt(hex.slice(1), 16);
+      let r = (num >> 16) + percent;
+      let g = ((num >> 8) & 0x00FF) + percent;
+      let b = (num & 0x0000FF) + percent;
+      r = Math.max(Math.min(255, r), 0);
+      g = Math.max(Math.min(255, g), 0);
+      b = Math.max(Math.min(255, b), 0);
+      return `#${(g | (b << 8) | (r << 16)).toString(16).padStart(6, '0')}`;
+    }
+
+    checkFinalBtn.addEventListener('click', checkPhrase);
+
+    renderDoors();
+  </script>
+</body>
+</html>
